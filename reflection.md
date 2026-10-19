@@ -5,7 +5,14 @@
 **a. Initial design**
 
 - Briefly describe your initial UML design.
+My initial UML design models PawPal+ as six classes. Four hold data (Owner, Pet, Task, ScheduledItem). Scheduler holds the scheduling logic, and DailyPlan holds its result. I kept the data separate from the scheduling logic so I could change the scheduling rules without touching the classes that store information.
 - What classes did you include, and what responsibilities did you assign to each?
+Owner: Stores the owner's name, how many minutes they have available each day, preferences, and their list of pets.
+Pet: Stores the pet's name and species, and owns the pet's list of tasks. It can add and remove tasks.
+Scheduler: Does the planning. It reads the owner's tasks and time limit, sorts the tasks by priority, and fits as many as it can into the available time
+DailyPlan: Holds the final schedule and the tasks that didn't fit.
+ScheduledItem: Pairs a Task with a start time and the reason the scheduler chose it. This is what lets the plan explain why each task is there.
+
 
 **b. Design changes**
 
