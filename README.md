@@ -42,6 +42,30 @@ pip install -r requirements.txt
 6. Connect your logic to the Streamlit UI in `app.py`.
 7. Refine UML so it matches what you actually built.
 
+## 🛠️ Implementation Summary
+
+The backend lives in `pawpal_system.py`, with the UML in `diagrams/uml.mmd`. `main.py` runs it in the terminal, and `tests/test_pawpal.py` covers it with pytest.
+
+**How the classes work together**
+
+- `Owner` holds the day's constraints (available minutes, start time) and a list of `Pet`s. `Owner.get_pending_tasks()` gathers every incomplete task across all pets.
+- `Pet` holds its own `Task`s. `add_task` tags each task with the pet's name, so a task still knows whose it is after the tasks are combined.
+- `Task` is a single activity: title, duration, `Priority`, `Frequency`, optional preferred time, and completion status.
+- `Scheduler` reads tasks only through the `Owner`, never from a single pet, so it plans across all pets at once. It sorts by priority, then preferred time, then shortest duration, and fits tasks into the available time from the start of the day. Tasks that don't fit are skipped, and scheduling continues with the rest.
+- `DailyPlan` is the result. It holds `ScheduledItem`s (task, start time, reason) and `SkippedItem`s (task, reason). `explain()` turns it into readable text.
+
+**Known simplifications**
+
+- Preferred time only breaks ties. Tasks are packed back to back from the start of the day rather than placed at their preferred time.
+- Recurring tasks (daily or weekly) are marked but not yet reset automatically.
+
+**Run it**
+
+```bash
+python main.py   # prints today's schedule
+pytest           # runs the tests
+```
+
 ## 🖥️ Sample Output
 
 Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
@@ -67,7 +91,17 @@ pytest --cov
 Sample test output:
 
 ```
-# Paste your pytest output here
+Owner: Jordan (90 min available, starting 08:00)
+  Mochi (dog): 2 tasks
+  Luna (cat): 3 tasks
+
+=== Today's Schedule ===
+08:00 - Breakfast for Luna (10 min, high): high priority
+08:10 - Morning walk for Mochi (30 min, high): high priority
+08:40 - Play session for Luna (20 min, medium): medium priority
+09:00 - Litter box for Luna (5 min, medium): medium priority
+Skipped - Grooming for Mochi: needs 45 min but only 25 min left
+Total scheduled time: 65 min
 ```
 
 ## 📐 Smarter Scheduling

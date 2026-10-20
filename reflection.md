@@ -18,6 +18,7 @@ ScheduledItem: Pairs a Task with a start time and the reason the scheduler chose
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
+Yes my design changed. After I wrote the class skeleton, I reviewed it for missing relationships and likely logic problems, and I made several changes before implementing anything. The most important change was linking each Task back to its Pet. In my first design, Owner.get_all_tasks() combined every pet's tasks into one list. Once that happened, the scheduler could no longer tell which pet a task belonged to, so the plan couldn't say "walk Mochi". I fixed this by adding a pet_name field to Task, which Pet.add_task fills in.
 
 ---
 
