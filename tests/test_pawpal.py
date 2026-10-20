@@ -221,3 +221,51 @@ def test_conflict_warnings_survive_bad_data():
     (msg,) = scheduler.conflict_warnings()
 
     assert msg.startswith("Warning: could not check")
+
+
+def test_sort_by_time_returns_chronological_order():
+    scheduler, mochi, luna = _two_pet_scheduler()
+    tasks = [
+        Task("Dinner", 10, Priority.HIGH, preferred_minute=17 * 60),
+        Task("Breakfast", 10, Priority.LOW, preferred_minute=9 * 60),  # "9:00" would sort after "17:00" as a string
+        Task("Lunch", 10, Priority.MEDIUM, preferred_minute=12 * 60),
+    ]
+    for t in tasks:
+        mochi.add_task(t)
+
+    ordered = scheduler.sort_by_time(mochi.tasks)
+
+    assert [t.title for t in ordered] == ["Breakfast", "Lunch", "Dinner"]
+
+
+def test_sort_by_time_puts_unscheduled_tasks_last():
+    scheduler, mochi, _ = _two_pet_scheduler()
+    mochi.add_task(Task("Anytime", 10, Priority.HIGH))
+    mochi.add_task(Task("Midnight", 10, Priority.LOW, preferred_minute=0))
+    mochi.add_task(Task("Late", 10, Priority.LOW, preferred_minute=23 * 60 + 59))
+
+    ordered = scheduler.sort_by_time(mochi.tasks)
+
+    assert [t.title for t in ordered] == ["Midnight", "Late", "Anytime"]
+
+
+def test_sort_by_time_is_stable_for_ties_and_handles_empty():
+    scheduler, mochi, luna = _two_pet_scheduler()
+    first = Task("First", 10, Priority.LOW, preferred_minute=480)
+    second = Task("Second", 10, Priority.HIGH, preferred_minute=480)
+    mochi.add_task(first)
+    luna.add_task(second)
+
+    assert scheduler.sort_by_time([first, second]) == [first, second]
+    assert scheduler.sort_by_time([]) == []
+
+
+def test_build_plan_items_are_in_chronological_order():
+    scheduler, mochi, luna = _two_pet_scheduler()
+    mochi.add_task(Task("Dinner", 10, Priority.HIGH, preferred_minute=17 * 60))
+    luna.add_task(Task("Lunch", 10, Priority.LOW, preferred_minute=12 * 60))
+    mochi.add_task(Task("Walk", 30, Priority.MEDIUM, preferred_minute=9 * 60))
+
+    starts = [i.start_minute for i in scheduler.build_plan().items]
+
+    assert starts == sorted(starts)

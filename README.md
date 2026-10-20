@@ -161,22 +161,37 @@ Total scheduled time: 90 min
 
 ## 🧪 Testing PawPal+
 
+Run the full test suite from the `pawpal/` directory:
+
 ```bash
-# Run the full test suite:
-pytest
-
-# Run with coverage:
-pytest --cov
+python -m pytest
 ```
 
-Sample test output:
+Successful run:
 
 ```
-...................                                                      [100%]
-19 passed in 0.01s
+============================= test session starts ==============================
+platform darwin -- Python 3.14.8, pytest-9.1.1, pluggy-1.6.0
+rootdir: /Users/anniesoonyadeth/Documents/codepath-AI101/pawpal
+plugins: anyio-4.15.1
+collected 23 items
+
+tests/test_pawpal.py .......................                             [100%]
+
+============================== 23 passed in 0.01s ==============================
 ```
 
-The tests in `tests/test_pawpal.py` cover completion and task assignment, recurring task creation (daily, weekly, one-off), conflict detection and warnings, and plan building (preferred times, shifting, midnight cutoff, no overlaps).
+**What the tests cover** (`tests/test_pawpal.py`):
+
+- **Sorting correctness:** tasks come back in chronological order (9:00 before 17:00), unscheduled tasks go last, ties keep their original order, empty lists are safe, and built plans are in start-time order.
+- **Recurrence logic:** completing a daily task creates a new task for the next day, a weekly task creates one 7 days later, and a one-off task creates nothing.
+- **Conflict detection:** duplicate or overlapping times are flagged for the same pet and across pets. Back-to-back, unscheduled, different-day, and completed tasks are not flagged. Warnings are returned as messages instead of raising errors, even with bad data.
+- **Plan building:** preferred times are honored, lower-priority tasks shift past conflicts, gaps are filled, tasks that can't finish before midnight are skipped, and plans never overlap.
+- **Basics:** marking a task complete and adding tasks to a pet.
+
+**Confidence Level: ⭐⭐⭐⭐ (4/5)**
+
+All 23 tests pass and cover the core behaviors: sorting, recurrence, and conflict detection. I'm not giving 5 stars because some cases are untested: month, year and leap-year rollover for daily recurrence (it always uses `date.today()`), daylight saving time, task durations that overlap across midnight, and the Streamlit UI.
 
 ## 📐 Smarter Scheduling
 
