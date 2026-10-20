@@ -65,6 +65,18 @@ python main.py   # prints today's schedule
 pytest           # runs the tests
 ```
 
+## ✨ Features
+
+- **Priority-based scheduling:** `build_plan` orders tasks by priority (high first), then earliest preferred time, then shortest duration. Ties keep the owner's pet order.
+- **Preferred times with conflict shifting:** each task is placed at its preferred time, or at the day start if it has none. If a higher-priority task already holds that slot, it moves to the next free slot and the plan explains why.
+- **Time budget and midnight cutoff:** a task is skipped if its duration exceeds the minutes left, or if it can't finish before midnight. Each skip comes with a reason.
+- **Sorting by time:** `sort_by_time` puts the earliest preferred time first and tasks with no preferred time last. It compares minutes since midnight, so 9:00 sorts before 17:00. Ties keep their original order. `sort_by_title` sorts alphabetically, ignoring case.
+- **Filtering:** `filter_tasks` keeps tasks by pet name and/or completion status. A criterion left blank is ignored.
+- **Conflict warnings:** `find_conflicts` finds pending tasks whose time slots overlap on the same day, for the same pet or different pets. Back-to-back tasks, unscheduled tasks, completed tasks and tasks on different days are not flagged. `conflict_warnings` returns readable messages and never raises, so a bad task can't crash the app.
+- **Daily and weekly recurrence:** completing a daily task creates a fresh copy due tomorrow, and a weekly task's copy is due 7 days after its due date. One-off tasks create nothing. `Scheduler.complete_task` adds the new copy to the pet automatically.
+- **Plan explanations:** every scheduled task carries a reason, such as "at preferred time" or "moved from preferred 08:15 because Walk was already scheduled". `explain()` prints the whole plan with totals.
+- **Input validation:** durations must be positive, preferred times must fall between 00:00 and 23:59, and duplicate pet names or task ids are rejected.
+
 ## 🖥️ Sample Output
 
 Output of `python main.py`. Tasks are added out of order, then sorted, filtered, checked for conflicts, and scheduled. The dates in the recurring section depend on the day you run it.
@@ -239,14 +251,129 @@ Tasks carry a `frequency` (`ONCE`, `DAILY`, `WEEKLY`) and a `due_date`.
 
 Completing the same task twice creates two next occurrences, as nothing guards against it.
 
-## 📸 Demo Walkthrough
+## 🎬 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
+Start the app with `streamlit run app.py`. It is a single page, top to bottom.
 
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
+### Main UI features
 
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+- **Owner:** set your name and how many minutes you have today.
+- **Pets:** enter a name and species (dog, cat or other) and click **Add pet**. Duplicate names are rejected with an error.
+- **Tasks:** pick a pet, then set a title, duration, priority and frequency (once, daily or weekly). Tick **Preferred time** to pin the task to a time of day, then click **Add task**.
+- **Task list:** filter by pet and by status (all, pending or done), and sort by time or by title. Conflict warnings appear right below the list.
+- **Mark a task done:** choose a pending task and click **Complete**. A daily or weekly task creates its next occurrence and shows its due date.
+- **Today's Schedule:** click **Generate schedule** to see the plan. Each row shows start time, pet, task, minutes and a "Why" explanation, followed by skipped tasks and the total time used.
+
+### Example workflow
+
+1. Set the owner to Jordan with 90 minutes available.
+2. Add a pet named Mochi (dog), then a second pet, Luna (cat).
+3. Add tasks for Mochi: "Morning walk" (30 min, high, daily, 08:00) and "Brush teeth" (10 min, medium, 08:10).
+4. The two tasks overlap from 08:10 to 08:20, so a conflict warning appears under the task list.
+5. Add a task for Luna: "Vet call" (20 min, medium, 08:15). More warnings appear, since it overlaps both of Mochi's tasks.
+6. Switch **Sort by** to Time to see the tasks in chronological order, or filter to just Luna's tasks.
+7. Click **Generate schedule**. The walk keeps 08:00, "Brush teeth" shifts to 08:30, and "Vet call" shifts to 08:40. The Why column explains each move, and the plan itself has no overlaps.
+8. Select "Morning walk" under **Mark a task done** and click **Complete**. The task is marked done and a new daily "Morning walk" is added, due tomorrow.
+
+### Scheduler behaviors shown
+
+- **Sorting:** the task list is ordered by preferred time (unscheduled tasks last) or alphabetically by title.
+- **Filtering:** the list can be narrowed to one pet and/or to pending or done tasks.
+- **Conflict warnings:** overlapping tasks are flagged for the same pet or across pets, as messages rather than errors.
+- **Conflict resolution:** the generated plan shifts lower-priority tasks past higher-priority ones, so the final schedule never overlaps.
+- **Skipping with reasons:** tasks that don't fit in the available time (or before midnight) are listed with why.
+- **Recurrence:** completing a daily or weekly task creates the next occurrence automatically.
+
+### Sample CLI output
+
+Output of `python main.py`. The dates in the recurring section depend on the day you run it.
+
+```
+Owner: Jordan (90 min available, starting 08:00)
+  Mochi (dog): 5 tasks
+  Luna (cat): 5 tasks
+
+=== As added (out of order) ===
+  --:--  Grooming       Mochi  done
+  08:00  Morning walk   Mochi  todo
+  17:00  Evening meal   Mochi  todo
+  08:10  Brush teeth    Mochi  todo
+  12:00  Medication     Mochi  todo
+  18:00  Play session   Luna   todo
+  --:--  litter box     Luna   todo
+  07:30  Breakfast      Luna   todo
+  08:15  Vet call       Luna   todo
+  12:00  Training       Luna   todo
+
+=== Sorted by title ===
+  07:30  Breakfast      Luna   todo
+  08:10  Brush teeth    Mochi  todo
+  17:00  Evening meal   Mochi  todo
+  --:--  Grooming       Mochi  done
+  --:--  litter box     Luna   todo
+  12:00  Medication     Mochi  todo
+  08:00  Morning walk   Mochi  todo
+  18:00  Play session   Luna   todo
+  12:00  Training       Luna   todo
+  08:15  Vet call       Luna   todo
+
+=== Sorted by preferred time ===
+  07:30  Breakfast      Luna   todo
+  08:00  Morning walk   Mochi  todo
+  08:10  Brush teeth    Mochi  todo
+  08:15  Vet call       Luna   todo
+  12:00  Medication     Mochi  todo
+  12:00  Training       Luna   todo
+  17:00  Evening meal   Mochi  todo
+  18:00  Play session   Luna   todo
+  --:--  Grooming       Mochi  done
+  --:--  litter box     Luna   todo
+
+=== Filter: Luna's tasks ===
+  18:00  Play session   Luna   todo
+  --:--  litter box     Luna   todo
+  07:30  Breakfast      Luna   todo
+  08:15  Vet call       Luna   todo
+  12:00  Training       Luna   todo
+
+=== Filter: completed ===
+  --:--  Grooming       Mochi  done
+
+=== Filter: Mochi + pending ===
+  08:00  Morning walk   Mochi  todo
+  17:00  Evening meal   Mochi  todo
+  08:10  Brush teeth    Mochi  todo
+  12:00  Medication     Mochi  todo
+
+=== Luna's tasks, sorted by time ===
+  07:30  Breakfast      Luna   todo
+  08:15  Vet call       Luna   todo
+  12:00  Training       Luna   todo
+  18:00  Play session   Luna   todo
+  --:--  litter box     Luna   todo
+
+=== Conflict check ===
+  Warning: Conflict (same pet): Morning walk for Mochi and Brush teeth for Mochi overlap 08:10-08:20
+  Warning: Conflict (different pets): Morning walk for Mochi and Vet call for Luna overlap 08:15-08:30
+  Warning: Conflict (different pets): Brush teeth for Mochi and Vet call for Luna overlap 08:15-08:20
+  Warning: Conflict (different pets): Medication for Mochi and Training for Luna overlap 12:00-12:05
+
+=== Recurring: complete a daily and a weekly task ===
+  before: Mochi has 5 tasks
+  completed 'Morning walk' (daily, due 2026-10-19) -> new one due 2026-10-20
+  completed 'Grooming' (weekly, due 2026-10-19) -> new one due 2026-10-26
+  after:  Mochi has 7 tasks
+
+=== Today's Schedule ===
+08:00 - Breakfast for Luna (10 min, high): high priority; preferred 07:30 is before the day starts
+08:10 - Morning walk for Mochi (30 min, high): high priority; moved from preferred 08:00 because Breakfast for Luna was already scheduled
+08:40 - Brush teeth for Mochi (10 min, medium): medium priority; moved from preferred 08:10 because Morning walk for Mochi was already scheduled
+08:50 - Vet call for Luna (20 min, medium): medium priority; moved from preferred 08:15 because Brush teeth for Mochi was already scheduled
+09:10 - litter box for Luna (5 min, medium): medium priority; first free slot after Vet call for Luna
+12:00 - Medication for Mochi (5 min, high): high priority; at preferred time
+17:00 - Evening meal for Mochi (10 min, high): high priority; at preferred time
+Skipped - Training for Luna: needs 15 min but only 5 min left
+Skipped - Play session for Luna: needs 20 min but only 5 min left
+Skipped - Grooming for Mochi: needs 45 min but only 0 min left
+Total scheduled time: 90 min
+```

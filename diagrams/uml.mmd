@@ -1,5 +1,5 @@
 classDiagram
-    %% Draft UML (pre-implementation). Update to match the final code.
+    %% UML for the final implementation in pawpal_system.py.
 
     class Priority {
         <<enumeration>>
@@ -38,25 +38,46 @@ classDiagram
     }
 
     class Task {
-        +str id
         +str title
-        +str description
         +int duration_minutes
         +Priority priority
+        +str description
         +Frequency frequency
         +int preferred_minute
         +bool completed
+        +date due_date
         +str pet_name
+        +str id
         +is_recurring() bool
-        +mark_complete() None
+        +next_occurrence() Task
+        +mark_complete() Task
         +reset() None
     }
 
     class Scheduler {
         +Owner owner
         +tasks_by_pet() Dict~str, List~Task~~
+        +complete_task(task: Task) Task
+        +find_conflicts(tasks: List~Task~) List~Conflict~
+        +conflict_warnings(tasks: List~Task~) List~str~
+        +find_plan_conflicts(plan: DailyPlan) List~Conflict~
+        +sort_by_time(tasks: List~Task~) List~Task~
+        +sort_by_title(tasks: List~Task~) List~Task~
+        +filter_tasks(tasks, pet_name, completed) List~Task~
         +build_plan() DailyPlan
         -_sort_tasks(tasks: List~Task~) List~Task~
+        -_overlaps(slots) List~Conflict~
+        -_first_free_slot(placed, earliest, duration)
+        -_reason(task, start, blocker) str
+    }
+
+    class Conflict {
+        +Task first
+        +Task second
+        +int start_minute
+        +int end_minute
+        +same_pet() bool
+        +describe() str
     }
 
     class ScheduledItem {
@@ -77,12 +98,28 @@ classDiagram
         +explain() str
     }
 
-    Owner "1" *-- "1..*" Pet : owns
+    class StreamlitApp {
+        <<app.py>>
+        +Owner owner
+        +Scheduler scheduler
+    }
+
+    StreamlitApp --> Owner : keeps in session_state
+    StreamlitApp --> Scheduler : sorts, filters, warns, completes, plans
+    StreamlitApp ..> Pet : adds pets
+    StreamlitApp ..> Task : adds tasks
+
+    Owner "1" *-- "0..*" Pet : owns
     Pet "1" *-- "0..*" Task : has
     Task --> Priority : has
     Task --> Frequency : repeats
     Scheduler --> Owner : reads constraints from
     Scheduler ..> DailyPlan : creates
+    Scheduler ..> Conflict : creates
+    Scheduler ..> Task : sorts, filters, completes
+    Scheduler ..> Pet : complete_task adds next occurrence
+    Task ..> Task : next_occurrence() copies
+    Conflict --> Task : first / second
     DailyPlan "1" *-- "0..*" ScheduledItem : contains
     DailyPlan "1" *-- "0..*" SkippedItem : contains
     ScheduledItem --> Task : wraps
